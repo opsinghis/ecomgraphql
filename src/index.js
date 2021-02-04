@@ -1,17 +1,46 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom";
+import { BrowserRouter as Router, Switch, Route, Redirect } from "react-router-dom";
+import { getToken } from './utils';
+import "gestalt/dist/gestalt.css";
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
+import App from "./components/App";
+import Navbar from "./components/Navbar";
+import Signin from "./components/Signin";
+import Signup from "./components/Signup";
+import Checkout from "./components/Checkout";
+import Brews from "./components/Brews";
+
+import registerServiceWorker from "./registerServiceWorker";
+
+const PrivateRoute = ({ component: Component, ...rest }) => (
+  <Route {...rest} render={props => (
+    getToken() !== null ?
+      <Component {...props} /> : <Redirect to={{
+        pathname: '/signin',
+        state: { from: props.location }
+      }} />
+  )} />
+)
+
+const Root = () => (
+  <Router>
+    <React.Fragment>
+      <Navbar />
+      <Switch>
+        <Route component={App} exact path="/" />
+        <Route component={Signin} path="/signin" />
+        <Route component={Signup} path="/signup" />
+        <PrivateRoute component={Checkout} path="/checkout" />
+        <Route component={Brews} path="/:brandId" />
+      </Switch>
+    </React.Fragment>
+  </Router>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+ReactDOM.render(<Root />, document.getElementById("root"));
+registerServiceWorker();
+
+if (module.hot) {
+  module.hot.accept();
+}
