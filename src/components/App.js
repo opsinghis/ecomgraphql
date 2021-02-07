@@ -3,10 +3,33 @@ import React, { Component } from "react";
 import { Container, Box, Heading, Card, Image, Text, SearchField, Icon } from "gestalt";
 import { Link } from "react-router-dom";
 import Loader from "./Loader";
+import { documentToReactComponents } from '@contentful/rich-text-react-renderer';
 import "./App.css";
-import Strapi from "strapi-sdk-javascript/build/main";
-const apiUrl = process.env.API_URL || "http://localhost:1337";
-const strapi = new Strapi(apiUrl);
+
+const { REACT_APP_ACCESS_TOKEN,REACT_APP_SPACE_ID } = process.env;
+const CONTENTFUL_URL = `https://graphql.contentful.com/content/v1/spaces/${REACT_APP_SPACE_ID}`
+
+
+const query = `
+{
+    brandCollection{
+      items{
+        sys{
+          id
+        }
+        name
+        description{
+          json
+        }
+        image{
+          title
+          url
+        }
+      }
+    }
+  }
+`;
+
 
 class App extends Component {
   state = {
@@ -15,29 +38,39 @@ class App extends Component {
     loadingBrands: true
   };
 
-  async componentDidMount() {
-    try {
-      const response = await strapi.request("POST", "/graphql", {
-        data: {
-          query: `query {
-            brands {
-              _id
-              name
-              description
-              image {
-                url
-              }
-            }
-          }`
-        }
+
+ async componentDidMount() {
+    fetch(
+        CONTENTFUL_URL,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${REACT_APP_ACCESS_TOKEN}`
+            },
+            body: JSON.stringify({
+              query
+            })
+          }
+    )
+      .then(res => res.json())
+      .then(response => {
+        console.log(response);
+
+        const { data } = response;
+        this.setState({
+          loadingBrands: false,
+          brands: data ? data.brandCollection.items : []
+        });
+      })
+      .catch(error => {
+        this.setState({
+          loading: false,
+          error: error.message
+        });
       });
-      // console.log(response);
-      this.setState({ brands: response.data.brands, loadingBrands: false });
-    } catch (err) {
-      console.error(err);
-      this.setState({ loadingBrands: false });
-    }
   }
+
 
   handleChange = ({ value }) => {
     this.setState({ searchTerm: value });
@@ -96,7 +129,7 @@ class App extends Component {
           justifyContent="around"
         >
           {this.filteredBrands(this.state).map(brand => (
-            <Box paddingY={4} margin={2} width={200} key={brand._id}>
+            <Box paddingY={4} margin={2} width={200} key={brand.sys.id}>
               <Card
                 image={
                   <Box height={200} width={200}>
@@ -105,7 +138,7 @@ class App extends Component {
                       alt="Brand"
                       naturalHeight={1}
                       naturalWidth={1}
-                      src={`${apiUrl}${brand.image[0].url}`}
+                      src={brand.image.url}
                     />
                   </Box>
                 }
@@ -119,9 +152,9 @@ class App extends Component {
                   <Text bold size="xl">
                     {brand.name}
                   </Text>
-                  <Text>{brand.description}</Text>
+                  <Text>{documentToReactComponents(brand.description.json)}</Text>
                   <Text bold size="xl">
-                    <Link to={`/${brand._id}`}>See Brews</Link>
+                    <Link to={`/${brand.sys.id}`}>See Brews</Link>
                   </Text>
                 </Box>
               </Card>

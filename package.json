@@ -3,18 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@apollo/client": "^3.3.8",
+    "@contentful/rich-text-react-renderer": "^14.1.2",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",
+    "gestalt": "^0.79.1",
+    "graphql": "^15.5.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "react-scripts": "4.0.2",
-    "web-vitals": "^1.1.0",
-    "gestalt": "^0.79.1",
     "react-router-dom": "^4.3.1",
+    "react-scripts": "4.0.2",
     "react-spinners": "^0.4.5",
     "react-stripe-elements": "^2.0.1",
-    "strapi-sdk-javascript": "^0.2.1"
+    "strapi-sdk-javascript": "^0.2.1",
+    "web-vitals": "^1.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
