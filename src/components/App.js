@@ -27,8 +27,7 @@ const query = `
         }
       }
     }
-  }
-`;
+}`;
 
 
 class App extends Component {
@@ -80,7 +79,7 @@ class App extends Component {
     return brands.filter(brand => {
       return (
         brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        brand.description.toLowerCase().includes(searchTerm.toLowerCase())
+        documentToReactComponents(brand.description.json).toString().toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
   };

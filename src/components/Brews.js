@@ -1,11 +1,13 @@
 import React from "react";
-import Strapi from "strapi-sdk-javascript/build/main";
+
 // prettier-ignore
 import { Box, Heading, Text, Image, Card, Button, Mask, IconButton } from "gestalt";
 import { calculatePrice, setCart, getCart } from "../utils";
 import { Link } from "react-router-dom";
-const apiUrl = process.env.API_URL || "http://localhost:1337";
-const strapi = new Strapi(apiUrl);
+import { documentToReactComponents } from '@contentful/rich-text-react-renderer';
+
+const { REACT_APP_ACCESS_TOKEN,REACT_APP_SPACE_ID } = process.env;
+const CONTENTFUL_URL = `https://graphql.contentful.com/content/v1/spaces/${REACT_APP_SPACE_ID}`
 
 class Brews extends React.Component {
   state = {
@@ -14,40 +16,69 @@ class Brews extends React.Component {
     cartItems: []
   };
 
+
   async componentDidMount() {
-    try {
-      const response = await strapi.request("POST", "/graphql", {
-        data: {
-          query: `query {
-          brand(id: "${this.props.match.params.brandId}") {
-            _id
-            name
-            brews {
-              _id
-              name
-              description
-              image {
-                url
-              }
-              price
-            }
+    fetch(
+        CONTENTFUL_URL,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${REACT_APP_ACCESS_TOKEN}`
+            },
+            body: JSON.stringify({ query :`
+              {
+                brand(id: "${this.props.match.params.brandId}"){
+                  sys{
+                    id
+                  }
+                  name
+                  linkedFrom{
+                    brewCollection{
+                      items{
+                        sys{
+                          id
+                        }
+                        name
+                        description{
+                          json
+                        }
+                        price
+                        image{
+                          url
+                        }
+                        
+                      }
+                    }
+                  }
+                }
+              }`              
+            })
           }
-        }`
-        }
+    )
+      .then(res => res.json())
+      .then(response => {
+        console.log(response);
+
+        const { data } = response;
+        this.setState({
+          brews: data ? data.brand.linkedFrom.brewCollection.items : [],
+          brand: data.brand.name,
+          cartItems: getCart()
+        });
+      })
+      .catch(error => {
+        this.setState({
+          loading: false,
+          error: error.message
+        });
       });
-      this.setState({
-        brews: response.data.brand.brews,
-        brand: response.data.brand.name,
-        cartItems: getCart()
-      });
-    } catch (err) {
-      console.error(err);
-    }
   }
+
 
   addToCart = brew => {
     const alreadyInCart = this.state.cartItems.findIndex(
-      item => item._id === brew._id
+      item => item.sys.id === brew.sys.id
     );
 
     if (alreadyInCart === -1) {
@@ -65,13 +96,15 @@ class Brews extends React.Component {
 
   deleteItemFromCart = itemToDeleteId => {
     const filteredItems = this.state.cartItems.filter(
-      item => item._id !== itemToDeleteId
+      item => item.sys.id !== itemToDeleteId
     );
     this.setState({ cartItems: filteredItems }, () => setCart(filteredItems));
   };
 
   render() {
     const { brand, brews, cartItems } = this.state;
+
+    console.log("state date brews", brews);
 
     return (
       <Box
@@ -105,7 +138,7 @@ class Brews extends React.Component {
             padding={4}
           >
             {brews.map(brew => (
-              <Box paddingY={4} margin={2} width={210} key={brew._id}>
+              <Box paddingY={4} margin={2} width={210} key={brew.sys.id}>
                 <Card
                   image={
                     <Box height={250} width={200}>
@@ -114,7 +147,7 @@ class Brews extends React.Component {
                         alt="Brand"
                         naturalHeight={1}
                         naturalWidth={1}
-                        src={`${apiUrl}${brew.image[0].url}`}
+                        src={brew.image.url}
                       />
                     </Box>
                   }
@@ -130,7 +163,7 @@ class Brews extends React.Component {
                         {brew.name}
                       </Text>
                     </Box>
-                    <Text>{brew.description}</Text>
+                    <Text>{documentToReactComponents(brew.description.json)}</Text>
                     <Text color="orchid">${brew.price}</Text>
                     <Box marginTop={2}>
                       <Text bold size="xl">
@@ -177,7 +210,7 @@ class Brews extends React.Component {
                     icon="cancel"
                     size="sm"
                     iconColor="red"
-                    onClick={() => this.deleteItemFromCart(item._id)}
+                    onClick={() => this.deleteItemFromCart(item.sys.id)}
                   />
                 </Box>
               ))}
