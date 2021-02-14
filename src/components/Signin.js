@@ -2,9 +2,10 @@ import React from "react";
 import { Container, Box, Button, Heading, TextField } from "gestalt";
 import { setToken } from "../utils";
 import ToastMessage from "./ToastMessage";
-import Strapi from "strapi-sdk-javascript/build/main";
-const apiUrl = process.env.API_URL || "http://localhost:1337";
-const strapi = new Strapi(apiUrl);
+
+import { Auth } from 'aws-amplify';
+
+
 
 class Signin extends React.Component {
   state = {
@@ -20,17 +21,56 @@ class Signin extends React.Component {
     this.setState({ [event.target.name]: value });
   };
 
+  
+  signIn() {
+    const { username, password } = this.state;  
+    this.setState({ loading: true });
+    Auth.signIn({
+        username: username,
+        password: password
+    })
+      .then((user) => {
+        console.log("successfully signed in",user);
+        this.setState({ loading: true });
+        setToken(user.signInUserSession.idToken.jwtToken);
+        this.redirectUser("/");
+
+      })
+      .catch((err) => {
+        console.log("opps you need to correct this ",err);
+        this.setState({ loading: false });
+        this.showToast(err.message);
+      });
+}
+
+  confirmSignIn() {
+      const { username } = this.state;
+      Auth.confirmSignIn(username)
+      .then(() => console.log('successfully confirmed signed in'))
+      .catch((err) => console.log(`Error confirming sign up - ${ err }`))
+  }
+
+
   handleSubmit = async event => {
     event.preventDefault();
-    const { username, password } = this.state;
+    //const { username, password } = this.state;
 
     if (this.isFormEmpty(this.state)) {
       this.showToast("Fill in all fields");
       return;
     }
 
+
+    this.signIn();
+    this.confirmSignIn()
+    this.setState({
+        username: '',
+        password: '',
+        signedIn: true
+    });    
+
     // Sign up user
-    try {
+ /*    try {
       this.setState({ loading: true });
       const response = await strapi.login(username, password);
       this.setState({ loading: false });
@@ -39,7 +79,7 @@ class Signin extends React.Component {
     } catch (err) {
       this.setState({ loading: false });
       this.showToast(err.message);
-    }
+    } */
   };
 
   redirectUser = path => this.props.history.push(path);

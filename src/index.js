@@ -13,6 +13,12 @@ import Brews from "./components/Brews";
 
 import registerServiceWorker from "./registerServiceWorker";
 
+
+import Amplify from "aws-amplify";
+import aws_exports from "./aws-exports";
+
+Amplify.configure(aws_exports);
+
 const PrivateRoute = ({ component: Component, ...rest }) => (
   <Route {...rest} render={props => (
     getToken() !== null ?

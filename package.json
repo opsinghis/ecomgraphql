@@ -8,6 +8,8 @@
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",
+    "amazon-cognito-identity-js": "^4.5.10",
+    "aws-amplify": "^3.3.18",
     "gestalt": "^0.79.1",
     "graphql": "^15.5.0",
     "react": "^17.0.1",

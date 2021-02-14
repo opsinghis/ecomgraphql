@@ -1,46 +1,117 @@
 import React from "react";
 import { Container, Box, Button, Heading, Text, TextField } from "gestalt";
-import { setToken } from "../utils";
+//import { setToken } from "../utils";
 import ToastMessage from "./ToastMessage";
-import Strapi from "strapi-sdk-javascript/build/main";
-const apiUrl = process.env.API_URL || "http://localhost:1337";
-const strapi = new Strapi(apiUrl);
+
+import { Auth } from 'aws-amplify';
 
 class Signup extends React.Component {
-  state = {
-    username: "",
-    email: "",
-    password: "",
-    toast: false,
-    toastMessage: "",
-    loading: false
-  };
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        username: '',
+        password: '',
+        email: '',
+        confirmationCode: '',
+        verified: false,
+        toast: false,
+        toastMessage: "",
+        loading: false
+    };
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.signUp = this.signUp.bind(this);
+    this.confirmSignUp = this.confirmSignUp.bind(this);
+}
+
 
   handleChange = ({ event, value }) => {
     event.persist();
     this.setState({ [event.target.name]: value });
   };
 
+
+  confirmSignUp() {
+    console.log("confirmSignUp  is called correct now ");
+
+    const { username, confirmationCode } = this.state;
+
+    console.log("confirmation code is " ,confirmationCode );
+    Auth.confirmSignUp(username, confirmationCode)
+      .then((data) => {
+        console.log('Successfully confirmed signed up', data);
+        //setToken(data.user.signInUserSession.accessToken.jwtToken);
+        this.redirectUser("/Signin");
+       })
+      .catch((err) => console.log(`Error confirming sign up - ${err}`))
+  }
+
+
+  signUp() {
+    const { username, password, email } = this.state;
+    Auth.signUp({
+      username: username,
+      password: password,
+      attributes: {
+        email: email
+      }
+    })
+      .then((data) => {
+        console.log("well done user created ", data);
+        this.setState({ loading: false });
+      })
+      .catch((err) => {
+        console.log("opps you need to correct this ", err);
+        this.setState({ loading: false });
+        this.showToast(err.message);
+      });
+  };
+
   handleSubmit = async event => {
+    const { verified } = this.state
+
     event.preventDefault();
-    const { username, email, password } = this.state;
 
-    if (this.isFormEmpty(this.state)) {
-      this.showToast("Fill in all fields");
-      return;
+    console.log("Handle submit verfied  ", verified);
+    if (verified) {
+      this.confirmSignUp();
+      this.setState({
+        confirmationCode: '',
+        username: ''
+      });
+    } else {
+
+      if (this.isFormEmpty(this.state)) {
+        this.showToast("Fill in all fields");
+        return;
+      }
+
+      this.signUp();
+      this.setState({
+        password: '',
+        email: '',
+        verified: true
+      });
     }
 
-    // Sign up user
-    try {
-      this.setState({ loading: true });
-      const response = await strapi.register(username, email, password);
-      this.setState({ loading: false });
-      setToken(response.jwt);
-      this.redirectUser("/");
-    } catch (err) {
-      this.setState({ loading: false });
-      this.showToast(err.message);
-    }
+   // event.target.reset();
+
+    /*     try {
+          const { user } = await Auth.signUp({
+              username : username,
+              password : password,
+              attributes: {
+                  email : email         // optional
+                  //phone_number,   // optional - E.164 number convention
+                  // other custom attributes 
+              }
+          });
+          console.log(user);
+        } catch (error) {
+          console.log('error signing up:', error);
+         } */
   };
 
   redirectUser = path => this.props.history.push(path);
@@ -55,79 +126,41 @@ class Signup extends React.Component {
   };
 
   render() {
-    const { toastMessage, toast, loading } = this.state;
-
-    return (
-      <Container>
-        <Box
-          dangerouslySetInlineStyle={{
-            __style: {
-              backgroundColor: "#ebe2da"
-            }
-          }}
-          margin={4}
-          padding={4}
-          shape="rounded"
-          display="flex"
-          justifyContent="center"
-        >
-          {/* Sign Up Form */}
-          <form
-            style={{
-              display: "inlineBlock",
-              textAlign: "center",
-              maxWidth: 450
-            }}
-            onSubmit={this.handleSubmit}
-          >
-            {/* Sign Up Form Heading */}
-            <Box
-              marginBottom={2}
-              display="flex"
-              direction="column"
-              alignItems="center"
-            >
-              <Heading color="midnight">Let's Get Started</Heading>
+    const { toastMessage, toast, loading, verified } = this.state;
+    if (verified) {
+      return (
+        <div>
+          <Heading color="midnight">Last step , kindly validate your code</Heading>
+              <Text italic color="orchid">
+                Confirmation code!
+              </Text>
+          <form onSubmit={this.handleSubmit}>
+            <TextField id='confirmationCode' type='text' name="confirmationCode"  onChange={this.handleChange} />
+            <Button inline disabled={loading} color="blue" text="Submit" type="submit" />
+          </form>
+          <ToastMessage show={toast} message={toastMessage} />
+        </div>
+      );
+    } else {
+      return (
+        <div>
+           <Heading color="midnight">Let's Get Started</Heading>
               <Text italic color="orchid">
                 Sign up to order some brews!
               </Text>
-            </Box>
-            {/* Username Input */}
-            <TextField
-              id="username"
-              type="text"
-              name="username"
-              placeholder="Username"
-              onChange={this.handleChange}
-            />
-            {/* Email Address Input */}
-            <TextField
-              id="email"
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              onChange={this.handleChange}
-            />
-            {/* Password Input */}
-            <TextField
-              id="password"
-              type="password"
-              name="password"
-              placeholder="Password"
-              onChange={this.handleChange}
-            />
-            <Button
-              inline
-              disabled={loading}
-              color="blue"
-              text="Submit"
-              type="submit"
-            />
+          <form onSubmit={this.handleSubmit}>
+            <label>Username</label>
+            <TextField id='username' type='text' name="username" onChange={this.handleChange} />
+            <label>Password</label>
+            <TextField id='password' type='password' name="password" onChange={this.handleChange} />
+            <label>Email</label>
+            <TextField id='email' type='email' name="email" onChange={this.handleChange} />
+            <Button inline disabled={loading} color="blue" text="Submit" type="submit" />
+            <ToastMessage show={toast} message={toastMessage} />
           </form>
-        </Box>
-        <ToastMessage show={toast} message={toastMessage} />
-      </Container>
-    );
+        </div>
+      );
+    }
   }
 }
 
