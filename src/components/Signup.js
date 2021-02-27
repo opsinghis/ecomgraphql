@@ -42,7 +42,6 @@ class Signup extends React.Component {
     Auth.confirmSignUp(username, confirmationCode)
       .then((data) => {
         console.log('Successfully confirmed signed up', data);
-        //setToken(data.user.signInUserSession.accessToken.jwtToken);
         this.redirectUser("/Signin");
        })
       .catch((err) => console.log(`Error confirming sign up - ${err}`))

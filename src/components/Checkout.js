@@ -2,13 +2,16 @@ import React from "react";
 // prettier-ignore
 import { Container, Box, Button, Heading, Text, TextField, Modal, Spinner } from "gestalt";
 // prettier-ignore
-import { Elements, StripeProvider, CardElement, injectStripe } from 'react-stripe-elements';
+import { Elements, StripeProvider, CardElement, injectStripe} from 'react-stripe-elements';
 import ToastMessage from "./ToastMessage";
 import { getCart, calculatePrice, clearCart, calculateAmount } from "../utils";
 import { withRouter } from "react-router-dom";
-import Strapi from "strapi-sdk-javascript/build/main";
-const apiUrl = process.env.API_URL || "http://localhost:1337";
-const strapi = new Strapi(apiUrl);
+
+import { API, graphqlOperation } from "aws-amplify";
+import { createOrder } from "./graphql/mutations";
+
+
+
 
 class _CheckoutForm extends React.Component {
   state = {
@@ -20,7 +23,8 @@ class _CheckoutForm extends React.Component {
     toast: false,
     toastMessage: "",
     orderProcessing: false,
-    modal: false
+    modal: false,
+    billingDetails : [] 
   };
 
   componentDidMount() {
@@ -44,6 +48,8 @@ class _CheckoutForm extends React.Component {
   };
 
   handleSubmitOrder = async () => {
+
+
     const { cartItems, city, address, postalCode } = this.state;
 
     const amount = calculateAmount(cartItems);
@@ -51,22 +57,46 @@ class _CheckoutForm extends React.Component {
     this.setState({ orderProcessing: true });
     let token;
     try {
-      const response = await this.props.stripe.createToken();
-      token = response.token.id;
-      await strapi.createEntry("orders", {
-        amount,
-        brews: cartItems,
-        city,
-        postalCode,
-        address,
-        token
-      });
+      // Get a reference to a mounted CardElement. Elements knows how
+      // to find your CardElement because there can only ever be one of
+      // each type of element.
+      const payload = await this.props.stripe.createToken();
+      token = payload.token.id;
+      console.log('Payment token received !',token ); 
+
+      //modify the products to map the graphql attributes
+      let updatedProducts=[];
+      updatedProducts = this.state.cartItems.map((item, index) => ({
+        ...item, category:"TATA",productId: cartItems[index].sys.id,pictures:cartItems[index].image.url
+       }));
+
+      const filteredItems=updatedProducts.map(function({productId, name, category, pictures, price, quantity }) {
+        return { productId:productId, name:name, category:category, pictures:pictures, price:price, quantity:quantity};
+        });
+       console.log("Filtered list", filteredItems) ;
+
+
+      const order = {
+        deliveryPrice: 20, 
+        paymentToken: token,
+        address: {city: city, country: "Sweden", name: "Om Singh", state: "Skane", postCode: postalCode, phoneNumber: "123456789", streetAddress: address}, 
+        products:filteredItems
+      }  
+
+      console.log('input query',order ); 
+
+      const orderInResponse = await API.graphql(graphqlOperation(createOrder,{ order }));
+      console.log('Create Order successfully Submitted!',orderInResponse );
+
+
       this.setState({ orderProcessing: false, modal: false });
       clearCart();
       this.showToast("Your order has been successfully submitted!", true);
     } catch (err) {
       this.setState({ orderProcessing: false, modal: false });
+      console.error("oh no we have an error ", err);
       this.showToast(err.message);
+
     }
   };
 
@@ -178,7 +208,7 @@ class _CheckoutForm extends React.Component {
                 <CardElement
                   id="stripe__input"
                   onReady={input => input.focus()}
-                />
+                /> 
                 <button id="stripe__button" type="submit">
                   Submit
                 </button>
@@ -292,7 +322,7 @@ const ConfirmationModal = ({
 const CheckoutForm = withRouter(injectStripe(_CheckoutForm));
 
 const Checkout = () => (
-  <StripeProvider apiKey="pk_test_CN8uG9E9KDNxI7xVtdN1U5Be">
+  <StripeProvider apiKey="pk_test_51IG8NpL8X0p7pPjMioBHLBSDAv8OCxFkmUhzPtO77nxVUhJxdgOmmNeLgmTQQ87nn5ZEmtEh67mQILBz8WT4uww200M4SZiUbF">
     <Elements>
       <CheckoutForm />
     </Elements>

@@ -10,6 +10,7 @@ import Signin from "./components/Signin";
 import Signup from "./components/Signup";
 import Checkout from "./components/Checkout";
 import Brews from "./components/Brews";
+import Poc from "./components/Poc";
 
 import registerServiceWorker from "./registerServiceWorker";
 
@@ -37,6 +38,7 @@ const Root = () => (
         <Route component={App} exact path="/" />
         <Route component={Signin} path="/signin" />
         <Route component={Signup} path="/signup" />
+        <Route component={Poc} path="/poc" />
         <PrivateRoute component={Checkout} path="/checkout" />
         <Route component={Brews} path="/:brandId" />
       </Switch>
