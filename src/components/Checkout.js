@@ -67,7 +67,7 @@ class _CheckoutForm extends React.Component {
       //modify the products to map the graphql attributes
       let updatedProducts=[];
       updatedProducts = this.state.cartItems.map((item, index) => ({
-        ...item, category:"TATA",productId: cartItems[index].sys.id,pictures:cartItems[index].image.url
+        ...item, category:cartItems[index].brand,productId: cartItems[index].sys.id,pictures:cartItems[index].image.url
        }));
 
       const filteredItems=updatedProducts.map(function({productId, name, category, pictures, price, quantity }) {

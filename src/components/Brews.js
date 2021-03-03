@@ -84,7 +84,7 @@ class Brews extends React.Component {
     if (alreadyInCart === -1) {
       const updatedItems = this.state.cartItems.concat({
         ...brew,
-        quantity: 1
+        quantity: 1,"brand" : this.state.brand
       });
       this.setState({ cartItems: updatedItems }, () => setCart(updatedItems));
     } else {
